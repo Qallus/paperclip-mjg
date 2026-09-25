@@ -131,7 +131,14 @@ runtime secrets:
 | `ANTHROPIC_API_KEY` | `sk-ant-…` | Optional, but agents need at least one provider key |
 | `OPENAI_API_KEY` | `sk-…` | Optional |
 | `PAPERCLIP_AUTH_DISABLE_SIGN_UP` | `false` | Flip to `true` after step 6 |
+| `PAPERCLIP_PUBLIC_URL` | `https://paperclip.michaeljgauthier.com` | Full origin, scheme included, no trailing slash |
 | `TRUST_PROXY` | `uniquelocal` | Already defaulted in the compose file; only change it if you front Coolify with another proxy |
+
+> **Do not try to set `SERVICE_FQDN_PAPERCLIP_3100` by hand.** Coolify owns
+> every `SERVICE_FQDN_*` name: it rewrites the value from the service's Domain
+> field on each deploy and silently discards anything you enter. That is why
+> `PAPERCLIP_PUBLIC_URL` is a separate variable rather than being derived from
+> it.
 
 Keep these out of the repo. The compose file refuses to start if the three
 generated secrets are missing, rather than silently booting with a weak default.
@@ -144,11 +151,15 @@ On the **`paperclip` service**, set the domain to:
 https://paperclip.michaeljgauthier.com
 ```
 
-Coolify maps that onto the `SERVICE_FQDN_PAPERCLIP_3100` variable the compose
-file declares, generates the Traefik routing labels for container port 3100,
-and requests the Let's Encrypt certificate. The compose file feeds the same
-value to `PAPERCLIP_PUBLIC_URL`, which Paperclip requires in public mode — so
-the app's own links, auth callbacks, and cookie domain all match the real URL.
+**Set the port to 3100**, not Coolify's default of 3000. The port is part of
+the magic variable's name (`SERVICE_FQDN_PAPERCLIP_<port>`), so a mismatch
+leaves the variable in the compose file unset *and* points the proxy at a port
+nothing listens on. The symptom is a deploy log line reading
+`"SERVICE_FQDN_PAPERCLIP_3100" variable is not set. Defaulting to a blank
+string.` followed by "no server available" in the browser.
+
+From that field Coolify generates the Traefik routing labels and requests the
+Let's Encrypt certificate.
 
 Leave the `db` service with no domain.
 

@@ -46,8 +46,11 @@ services:
     expose:
       - "3100"
     environment:
-      # Coolify replaces this with the domain configured for this service and
-      # generates the matching proxy labels. Do not set it by hand.
+      # Coolify OWNS this name. It repopulates it from the service's Domain
+      # field on every deploy and discards anything set by hand, so do not
+      # try to set it yourself. It is declared here only so Coolify emits the
+      # proxy labels and requests the certificate for container port 3100 —
+      # the port in the name must match the Domain field's port.
       - SERVICE_FQDN_PAPERCLIP_3100
 
       - PORT=3100
@@ -59,7 +62,11 @@ services:
       # Internet-facing: login required, explicit public URL, strict checks.
       - PAPERCLIP_DEPLOYMENT_MODE=authenticated
       - PAPERCLIP_DEPLOYMENT_EXPOSURE=public
-      - PAPERCLIP_PUBLIC_URL=${SERVICE_FQDN_PAPERCLIP_3100}
+      # Deliberately NOT ${SERVICE_FQDN_PAPERCLIP_3100}: Coolify wipes manual
+      # values for that name, and a blank value fails Paperclip's
+      # z.string().url() check on publicBaseUrl, which refuses startup in
+      # public mode. This name is ours, so a value set in Coolify sticks.
+      - PAPERCLIP_PUBLIC_URL=${PAPERCLIP_PUBLIC_URL:?PAPERCLIP_PUBLIC_URL must be set, e.g. https://paperclip.example.com}
 
       # Coolify's proxy reaches this container over the private Docker
       # network, so X-Forwarded-* is trusted only from private ranges.
